@@ -366,48 +366,47 @@ const subgraphTests = [
       'inputs': {
         'inputA': {
           'data': [
-            49.1112174987793,    11.907459259033203,   21.115795135498047,
-            70.7490005493164,    94.51628112792969,   93.78905487060547,
-            11.178888320922852,  32.80592346191406,   83.31897735595703,
-            91.1207275390625,    0.11235756427049637, 15.397955894470215,
+            49.1112174987793, 11.907459259033203,
+            21.115795135498047, 70.7490005493164,
           ],
-          'descriptor': {shape: [2, 3, 2], dataType: 'float32'},
+          'descriptor': {shape: [2, 2], dataType: 'float32'},
           'constant': false
         },
         'inputAScale': {
-          'data': [0.003921568859368563],
+          'data': [0.3921568859368563],
           'descriptor': {shape: [1], dataType: 'float32'},
           'constant': true
         },
         'inputAZeroPoint': {
-          'data': [127],
+          'data': [16],
           'descriptor': {shape: [1], dataType: 'int8'},
           'constant': true
         },
         'inputB': {
           'data': [
-            2,  17, 38, 41, 5, 3, 2, 17, 38, 41, 5, 3,
+            21, 24,
+            8, 13
           ],
-          'descriptor': {shape: [2, 3, 2], dataType: 'int8'},
+          'descriptor': {shape: [2, 2], dataType: 'int8'},
           'constant': true
         },
         'inputBScale': {
-          'data': [0.003921568859368563],
+          'data': [0.3921568859368563],
           'descriptor': {shape: [1], dataType: 'float32'},
           'constant': true
         },
         'inputBZeroPoint': {
-          'data': [127],
+          'data': [16],
           'descriptor': {shape: [1], dataType: 'int8'},
           'constant': true
         },
         'outputScale': {
-          'data': [0.003921568859368563],
+          'data': [0.3921568859368563],
           'descriptor': {shape: [1], dataType: 'float32'},
           'constant': true
         },
         'outputZeroPoint': {
-          'data': [127],
+          'data': [16],
           'descriptor': {shape: [1], dataType: 'int8'},
           'constant': true
         },
@@ -438,24 +437,24 @@ const subgraphTests = [
           'outputs': 'dequantizedInputB'
         },
         {
-          'name': 'add',
+          'name': 'mul',
           'arguments': [
             {'inputA': 'dequantizedInputA'}, {'inputB': 'dequantizedInputB'}
           ],
-          'outputs': 'addOutput'
+          'outputs': 'mulOutput'
         },
         {
           'name': 'quantizeLinear',
           'arguments': [
-            {'input': 'addOutput'},
+            {'input': 'mulOutput'},
             {'scale': 'outputScale', 'zeroPoint': 'outputZeroPoint'}
           ],
-          'outputs': 'quantizedAddOutput'
+          'outputs': 'quantizedMulOutput'
         },
         {
           'name': 'dequantizeLinear',
           'arguments': [
-            {'input': 'quantizedAddOutput'},
+            {'input': 'quantizedMulOutput'},
             {'scale': 'outputScale', 'zeroPoint': 'outputZeroPoint'}
           ],
           'outputs': 'output'
@@ -464,12 +463,10 @@ const subgraphTests = [
       'expectedOutputs': {
         'output': {
           'data': [
-            -0.4901961088180542, -0.43137258291244507, -0.3490196168422699,
-            -0.33725491166114807, -0.4784314036369324, -0.4862745404243469,
-            -0.4901961088180542, -0.43137258291244507, -0.3490196168422699,
-            -0.33725491166114807, -0.4784314036369324, -0.4862745404243469,
+            43.529415130615234, 36.86274719238281,
+            -56.4705924987793, -51.372554779052734,
           ],
-          'descriptor': {shape: [2, 3, 2], dataType: 'float32'}
+          'descriptor': {shape: [2, 2], dataType: 'float32'}
         }
       }
     }
@@ -1467,6 +1464,132 @@ const subgraphTests = [
             -0.003921568859368563, -0.062745101749897,
           ],
           'descriptor': {shape: [3, 2], dataType: 'float32'}
+        }
+      }
+    }
+  },
+  {
+    'name': 'quantized split',
+    'graph': {
+      'inputs': {
+        'input': {
+          'data': [
+            1.6811466217041016, 0.0479511022567749, 0.33355462551116943,
+            -0.1988269537687301, -0.0041167140007019, -0.0634240251779556,
+          ],
+          'descriptor': {shape: [2, 3], dataType: 'float32'},
+          'constant': false
+        },
+        'inputScale': {
+          'data': [0.003921568859368563],
+          'descriptor': {shape: [1], dataType: 'float32'},
+          'constant': true
+        },
+        'inputZeroPoint': {
+          'data': [16],
+          'descriptor': {shape: [1], dataType: 'int8'},
+          'constant': true
+        },
+        'outputScale': {
+          'data': [0.003921568859368563],
+          'descriptor': {shape: [1], dataType: 'float32'},
+          'constant': true
+        },
+        'outputZeroPoint': {
+          'data': [16],
+          'descriptor': {shape: [1], dataType: 'int8'},
+          'constant': true
+        },
+      },
+      'operators': [
+        {
+          'name': 'quantizeLinear',
+          'arguments': [
+            {'input': 'input'},
+            {'scale': 'inputScale', 'zeroPoint': 'inputZeroPoint'}
+          ],
+          'outputs': 'quantizedInput'
+        },
+        {
+          'name': 'dequantizeLinear',
+          'arguments': [
+            {'input': 'quantizedInput'},
+            {'scale': 'inputScale', 'zeroPoint': 'inputZeroPoint'}
+          ],
+          'outputs': 'dequantizedInput'
+        },
+        {
+          'name': 'split',
+          'arguments': [{'input': 'dequantizedInput'}, {'splits': 3}, {'options': {'axis': 1}}],
+          'outputs': ['splitOutput 1', 'splitOutput 2', 'splitOutput 3'],
+        },
+        {
+          'name': 'quantizeLinear',
+          'arguments': [
+            {'input': 'splitOutput 1'},
+            {'scale': 'outputScale', 'zeroPoint': 'outputZeroPoint'}
+          ],
+          'outputs': 'quantizedSplitOutput 1'
+        },
+        {
+          'name': 'dequantizeLinear',
+          'arguments': [
+            {'input': 'quantizedSplitOutput 1'},
+            {'scale': 'outputScale', 'zeroPoint': 'outputZeroPoint'}
+          ],
+          'outputs': 'output 1'
+        },
+        {
+          'name': 'quantizeLinear',
+          'arguments': [
+            {'input': 'splitOutput 2'},
+            {'scale': 'outputScale', 'zeroPoint': 'outputZeroPoint'}
+          ],
+          'outputs': 'quantizedSplitOutput 2'
+        },
+        {
+          'name': 'dequantizeLinear',
+          'arguments': [
+            {'input': 'quantizedSplitOutput 2'},
+            {'scale': 'outputScale', 'zeroPoint': 'outputZeroPoint'}
+          ],
+          'outputs': 'output 2'
+        },
+                {
+          'name': 'quantizeLinear',
+          'arguments': [
+            {'input': 'splitOutput 3'},
+            {'scale': 'outputScale', 'zeroPoint': 'outputZeroPoint'}
+          ],
+          'outputs': 'quantizedSplitOutput 3'
+        },
+        {
+          'name': 'dequantizeLinear',
+          'arguments': [
+            {'input': 'quantizedSplitOutput 3'},
+            {'scale': 'outputScale', 'zeroPoint': 'outputZeroPoint'}
+          ],
+          'outputs': 'output 3'
+        }
+      ],
+      'expectedOutputs': {
+        'output 1': {
+          'data': [
+            0.43529415130615234, -0.20000001788139343,
+          ],
+          'descriptor': {shape: [2, 1], dataType: 'float32'}
+        },
+        'output 2': {
+          'data': [
+            0.0470588281750679, -0.003921568859368563,
+          ],
+          'descriptor': {shape: [2, 1], dataType: 'float32'}
+        },
+        'output 3': {
+          'data': [
+            0.3333333432674408, -0.062745101749897,
+          ],
+          'descriptor': {shape: [2, 1], dataType: 'float32'}
         }
       }
     }
